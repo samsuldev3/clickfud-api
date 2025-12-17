@@ -1,70 +1,64 @@
 package com.clickfud.clickfud.payment;
 
-import com.google.common.hash.Hashing;
-import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
-import java.util.UUID;
+import java.util.HashMap;
+import java.util.Map;
 
 @RestController
+@RequestMapping("/payu")
 public class PayUController {
 
+    private final String KEY = System.getenv("Dtc3ua");
+    private final String SALT = System.getenv("oaqg8pmlBHfxhZlAooQBwezk3XIlyj0h");
 
-    @GetMapping("/payu/start")
-    public void startPayU(HttpServletResponse response) throws Exception {
+    @PostMapping("/hash")
+    public Map<String, String> generateHash(@RequestBody Map<String, String> body) {
 
-        String key = "Dtc3ua";
-        String salt = "oaqg8pmlBHfxhZlAooQBwezk3XIlyj0h";
+        String txnId = body.get("txnId");
+        String amount = body.get("amount");
+        String productInfo = body.get("productInfo");
+        String firstname = body.get("name");
+        String email = body.get("email");
 
-        String txnId = UUID.randomUUID().toString().replace("-", "");
-        String amount = "250.00";
-        String productInfo = "Food Order";
-        String firstname = "Samsul";
-        String email = "test@email.com";
-        String phone = "9999999999";
-
-        String surl = "https://yourdomain.com/payu/success";
-        String furl = "https://yourdomain.com/payu/failure";
-
-        String hashString = key + "|" + txnId + "|" + amount + "|" + productInfo + "|" +
-                firstname + "|" + email + "|||||||||||" + salt;
+        String hashString =
+                KEY + "|" +
+                        txnId + "|" +
+                        amount + "|" +
+                        productInfo + "|" +
+                        firstname + "|" +
+                        email +
+                        "|||||||||||" +
+                        SALT;
 
         String hash = sha512(hashString);
 
-        String html =
-                "<html><body onload='document.forms[0].submit()'>" +
-                        "<form action='https://secure.payu.in/_payment' method='post'>" +
-                        hidden("key", key) +
-                        hidden("txnid", txnId) +
-                        hidden("amount", amount) +
-                        hidden("productinfo", productInfo) +
-                        hidden("firstname", firstname) +
-                        hidden("email", email) +
-                        hidden("phone", phone) +
-                        hidden("surl", surl) +
-                        hidden("furl", furl) +
-                        hidden("hash", hash) +
-                        "</form></body></html>";
-
-        response.setContentType("text/html");
-        response.getWriter().write(html);
+        Map<String, String> res = new HashMap<>();
+        res.put("key", KEY);
+        res.put("hash", hash);
+        return res;
     }
 
-    private String hidden(String name, String value) {
-        return "<input type='hidden' name='" + name + "' value='" + value + "' />";
+    @PostMapping("/success")
+    public String success(@RequestParam Map<String, String> params) {
+        return "PAYMENT SUCCESS";
     }
-    private static String sha512(String input) throws Exception {
-        MessageDigest md = MessageDigest.getInstance("SHA-512");
-        byte[] bytes = md.digest(input.getBytes(StandardCharsets.UTF_8));
-        StringBuilder sb = new StringBuilder();
-        for (byte b : bytes) {
-            sb.append(String.format("%02x", b));
+
+    @PostMapping("/failure")
+    public String failure(@RequestParam Map<String, String> params) {
+        return "PAYMENT FAILED";
+    }
+
+    private String sha512(String input) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-512");
+            byte[] bytes = md.digest(input.getBytes());
+            StringBuilder sb = new StringBuilder();
+            for (byte b : bytes) sb.append(String.format("%02x", b));
+            return sb.toString();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
-        return sb.toString();
     }
-
 }

@@ -3,8 +3,11 @@ package com.clickfud.clickfud.payment;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-@Service
+@RestController
+@RequestMapping("/payu")
 public class PayUHashService {
 
     @Value("${payu.key}")
